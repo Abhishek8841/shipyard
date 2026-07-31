@@ -2,11 +2,9 @@
   "extends": "../../tsconfig.json",
 
   "compilerOptions": {
-    "rootDir": "src/server",
+    "rootDir": "src",
     "outDir": "dist"
   },
 
-  "include": [
-    "src/server"
-, "src/express.d.ts"  ]
+  "include": ["src"]
 }
