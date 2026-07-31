@@ -13,14 +13,35 @@ datasource db {
 }
 
 model User { 
-  id    Int     @id @default(autoincrement()) 
-  email String  @unique
-  name  String?
+  id    String     @id @default(cuid()) 
+  username  String @unique
+  passwordHash String
+  
   deployments Deployment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Deployment {
-  id Int @id @default(autoincrement())
-  userId Int
+  id String @id @default(cuid())
+  projectName String
+  status DeploymentStatus @default(PENDING)
+
+  gitUrl String
+
+  userId String
   user User @relation(fields: [userId], references: [id])
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+enum DeploymentStatus {
+  PENDING
+  QUEUED
+  BUILDING
+  DEPLOYING
+  READY
+  FAILED
 }
