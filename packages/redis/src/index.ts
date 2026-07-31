@@ -1,0 +1,1 @@
+export { redis_class } from "./redis-manager";
