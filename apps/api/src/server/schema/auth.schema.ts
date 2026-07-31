@@ -15,7 +15,7 @@ export const signinSchema = z.object(
     }
 )
 
-export const idSchema = z.number();
+export const idSchema = z.cuid();
 
 export type signupType = z.infer<typeof signupSchema>
 export type signinType = z.infer<typeof signinSchema>
