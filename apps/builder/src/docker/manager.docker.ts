@@ -1,6 +1,6 @@
 import { Container, Exec } from "dockerode";
 import docker from "./client.docker";
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 import path from "path";
 
 
@@ -82,6 +82,13 @@ export class DockerManager {
 
     static async streamLogs() {
 
+    }
+
+    static async getBuildArtifacts(container: Container) {
+        const archive = await container.getArchive({
+            path: "/app/dist",
+        })
+        return archive as Readable;
     }
 
     static async destroyContainer(container: Container) {
