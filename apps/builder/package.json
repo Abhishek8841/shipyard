@@ -10,6 +10,10 @@
     "@shipyard/redis": "^1.0.0",
     "@shipyard/shared": "^1.0.0",
     "bullmq": "^6.0.3",
+    "dockerode": "^5.0.1",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1"
   }
 }
