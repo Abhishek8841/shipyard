@@ -1,0 +1,5 @@
+export type jobArgs = {
+    deploymentId: string,
+    projectName: string,
+    gitUrl: string
+}

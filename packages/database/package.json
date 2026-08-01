@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
+    },
+    "./status" : {
+      "types": "./dist/src/generated/prisma/enums.d.ts",
+      "import" : "./dist/src/generated/prisma/enums.js"
     }
   },
   "devDependencies": {

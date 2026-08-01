@@ -1,7 +1,7 @@
 import { prisma } from "@shipyard/database";
 import { uploadType } from "../schema/upload.schema";
 import { idType } from "../schema/auth.schema";
-import { DeploymentStatus } from "../../../../../packages/database/dist/src/generated/prisma/enums";
+import { DeploymentStatus } from "@shipyard/database/status";
 import { queueFunctions } from "../../queue/manager.queue";
 
 export const uploadService = async (deploymentDetails: uploadType, id: idType): Promise<string> => {
