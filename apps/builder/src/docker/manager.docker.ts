@@ -1,6 +1,6 @@
 import { Container, Exec } from "dockerode";
 import docker from "./client.docker";
-import { Readable, Writable } from "stream";
+import { Writable } from "stream";
 import path from "path";
 
 
@@ -81,7 +81,7 @@ export class DockerManager {
             AttachStdout: true,
             Tty: false,
         });
-        console.log("exec done", "+", "going to output collction now");
+        console.log("exec done", "+", "going to output collection now");
 
         return await this.collectOutput(exec);
     }
@@ -94,7 +94,7 @@ export class DockerManager {
         const stream = await container.getArchive({
             path: "/app/dist",
         })
-        console.log("Stream archive returned by docker is ", stream);
+        // console.log("Stream archive returned by docker is ", stream);
         return stream;
     }
 
