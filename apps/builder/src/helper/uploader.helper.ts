@@ -12,14 +12,32 @@ export const s3 = new S3Client({
 })
 
 
-export async function uploadToObjectStore(deploymentId: string, dotTarFile: Readable) {
-    await s3.send(new PutObjectCommand(
-        {
+async function streamToBuffer(stream: Readable) {
+    const chunks = [];
+
+    for await (const chunk of stream) {
+        chunks.push(Buffer.from(chunk));
+    }
+
+    return Buffer.concat(chunks);
+}
+
+
+export async function uploadToObjectStore(
+    deploymentId: string,
+    stream: any
+) {
+    const buffer = await streamToBuffer(stream);
+
+    await s3.send(
+        new PutObjectCommand({
             Bucket: process.env.MINIO_BUCKET!,
             Key: `${deploymentId}.tar`,
-            Body: dotTarFile,
+            Body: buffer,
             ContentType: "application/x-tar",
-        }
-    ));
-    console.log("Inside uploader.helper.ts");
+            ContentLength: buffer.length,
+        })
+    );
+
+    console.log("Uploaded successfully");
 }

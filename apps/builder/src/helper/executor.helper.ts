@@ -15,9 +15,9 @@ export async function executor(gitUrl: string, deploymentId: string): Promise<ex
 
         if (result.exitCode != 0) throw new Error(result.stderr || "Build Failed");
 
-        const dotTarFile = await DockerManager.getBuildArtifacts(container);
+        const stream = await DockerManager.getBuildArtifacts(container);
 
-        await uploadToObjectStore(deploymentId, dotTarFile);
+        await uploadToObjectStore(deploymentId, stream);
 
         return {
             success: true,

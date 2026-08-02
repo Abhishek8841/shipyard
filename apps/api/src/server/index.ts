@@ -2,12 +2,14 @@ import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import urlRouter from "./routes/url.routes";
 import authRouter from "./routes/auth.routes";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/v1", urlRouter);
 app.use("/api/v1", authRouter);

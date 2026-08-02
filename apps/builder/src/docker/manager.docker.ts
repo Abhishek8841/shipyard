@@ -8,6 +8,7 @@ export class DockerManager {
     static async createContainer() {
         console.log("inside manager.docker.ts -> createContainer");
         const mountPath = path.join(__dirname, "main.sh");
+        console.log(mountPath);
         const container = await docker.createContainer(
             {
                 Image: "node:22",
@@ -18,7 +19,7 @@ export class DockerManager {
                     AutoRemove: false,
                     Binds: [`${mountPath}:/builder/main.sh:ro`],
                     // NetworkMode: "none",
-                    CapDrop: ["ALL"],
+                    // CapDrop: ["ALL"],
                     NanoCpus: 1_000_000_000,
                     Memory: 256 * 1024 * 1024,
                 },
@@ -27,6 +28,7 @@ export class DockerManager {
             }
         )
         await container.start();
+        console.log("container started");
         return container;
     }
 
@@ -34,6 +36,8 @@ export class DockerManager {
         const stream = await exec.start({});
         let stdout = "";
         let stderr = "";
+
+        console.log("output collection started");
 
         const stdoutBox = new Writable({
             write(chunk, encoding, callback) {
@@ -61,7 +65,7 @@ export class DockerManager {
         });
 
         const inspect = await exec.inspect();
-
+        console.log("output collection done");
         return {
             exitCode: inspect.ExitCode,
             stdout,
@@ -70,12 +74,14 @@ export class DockerManager {
     }
 
     static async startContainer(container: Container, gitUrl: string) {
+        console.log("starting exec");
         const exec = await container.exec({
             Cmd: ["/bin/bash", "/builder/main.sh", gitUrl],
             AttachStderr: true,
             AttachStdout: true,
             Tty: false,
         });
+        console.log("exec done", "+", "going to output collction now");
 
         return await this.collectOutput(exec);
     }
@@ -85,10 +91,11 @@ export class DockerManager {
     }
 
     static async getBuildArtifacts(container: Container) {
-        const archive = await container.getArchive({
+        const stream = await container.getArchive({
             path: "/app/dist",
         })
-        return archive as Readable;
+        console.log("Stream archive returned by docker is ", stream);
+        return stream;
     }
 
     static async destroyContainer(container: Container) {

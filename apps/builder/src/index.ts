@@ -9,7 +9,8 @@ const upload_worker = new Worker(
     {
         connection: redis_class.getQueueConnection(),
         maxStalledCount: 2,
-        stalledInterval: 30000,
+        stalledInterval: 60*1000,
+        lockDuration: 10 * 60 * 1000, 
     }
 )
 
