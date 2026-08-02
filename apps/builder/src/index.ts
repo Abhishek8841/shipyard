@@ -17,7 +17,7 @@ upload_worker.on("completed", (job) => { console.log(`Job ${job.id} completed`);
 
 upload_worker.on("stalled", (jobId) => { console.log(`${jobId} stalled`); });
 
-upload_worker.on("error", (error) => { console.log(error + " Error in a Job"); });
+upload_worker.on("error", (error) => { console.log("Error in a Job " + error); });
 
 upload_worker.on("active", (job) => { console.log(`Job ${job.id} is active`); });
 
