@@ -2,6 +2,7 @@ import { S3Client } from "@aws-sdk/client-s3"
 import { Upload } from "@aws-sdk/lib-storage";
 import { Readable } from "stream"
 import tar from "tar-stream"
+import mime from "mime"
 
 
 // import fs from "fs";
@@ -40,6 +41,8 @@ async function extractTar(
             const filePath =
                 header.name.replace(/^dist\//, "");
 
+            const fileType = mime.getType(filePath);
+
             try {
 
                 const upload = new Upload({
@@ -48,6 +51,7 @@ async function extractTar(
                         Bucket: process.env.MINIO_BUCKET!,
                         Key: `${deploymentId}/${filePath}`,
                         Body: Readable.from(stream),
+                        ContentType: fileType ?? "application/octet-stream",
                     },
                 });
 

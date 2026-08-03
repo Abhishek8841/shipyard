@@ -33,7 +33,9 @@ app.get("/*splat", async (req: Request, res: Response) => {
         const result = await s3.send(
             objectStream(deploymentId, filePath)
         );
-
+        if(result.ContentType){
+            res.setHeader("Content-Type", result.ContentType);
+        }
         if (result.Body instanceof Readable) {
             result.Body.pipe(res);
         }
