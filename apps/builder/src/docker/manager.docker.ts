@@ -99,7 +99,7 @@ export class DockerManager {
     }
 
     static async destroyContainer(container: Container) {
-        await container.stop().catch(() => { });
+        await container.stop().catch((error) => { console.log(error) });
         await container.remove({ force: true });
     }
 }

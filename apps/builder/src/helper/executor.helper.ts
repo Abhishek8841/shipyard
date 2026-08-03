@@ -25,6 +25,8 @@ export async function executor(gitUrl: string, deploymentId: string): Promise<ex
         }
     }
     finally {
+        console.log("destroying container");
         await DockerManager.destroyContainer(container);
+        console.log("destroyed container");
     }
 }
