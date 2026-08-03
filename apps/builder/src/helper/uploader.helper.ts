@@ -1,4 +1,5 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { S3Client } from "@aws-sdk/client-s3"
+import { Upload } from "@aws-sdk/lib-storage";
 import { Readable } from "stream"
 import tar from "tar-stream"
 
@@ -15,74 +16,78 @@ export const s3 = new S3Client({
         secretAccessKey: process.env.MINIO_SECRET_KEY!,
     },
     forcePathStyle: true,
+    requestChecksumCalculation: "WHEN_REQUIRED"
 })
 
 
-async function extractTar(deploymentId: string, buffer: Buffer) {
+async function extractTar(
+    deploymentId: string,
+    mainStream: Readable
+) {
 
     const extract = tar.extract();
 
-    extract.on("entry", (header, stream, next) => {
+    extract.on(
+        "entry",
+        async (header, stream, next) => {
 
-        const chunks: Buffer[] = [];
-
-        stream.on(
-            "data",
-            chunk => {
-                chunks.push(Buffer.from(chunk));
+            if (header.type === "directory") {
+                stream.resume();
+                next();
+                return;
             }
-        );
 
-        stream.on("end", async () => {
+            const filePath =
+                header.name.replace(/^dist\//, "");
 
-            const fileBuffer =
-                Buffer.concat(chunks);
-            const newHeader = header.name.replace(/^dist\//,"")
-            await s3.send(
-                new PutObjectCommand({
-                    Bucket: process.env.MINIO_BUCKET!,
-                    Key: `${deploymentId}/${newHeader}`,
-                    Body: fileBuffer
-                })
-            );
+            try {
 
-            next();
+                const upload = new Upload({
+                    client: s3,
+                    params: {
+                        Bucket: process.env.MINIO_BUCKET!,
+                        Key: `${deploymentId}/${filePath}`,
+                        Body: Readable.from(stream),
+                    },
+                });
+
+                await upload.done();
+                next();
+
+            } catch (error: any) {
+
+                extract.destroy(error);
+
+            }
         }
-        );
-
-        stream.resume();
-    }
     );
 
+    mainStream.pipe(extract);
 
-    Readable.from(buffer)
-        .pipe(extract);
-
-    await new Promise(resolve => {
+    await new Promise((resolve, reject) => {
         extract.on("finish", resolve);
+        extract.on("error", reject);
     });
 }
 
-async function streamToBuffer(stream: Readable) {
-    // stream.pipe(x);
-    const chunks = [];
+// async function streamToBuffer(stream: Readable) {
+//     // stream.pipe(x);
+//     const chunks = [];
 
-    for await (const chunk of stream) {
-        chunks.push(Buffer.from(chunk));
-    }
+//     for await (const chunk of stream) {
+//         chunks.push(Buffer.from(chunk));
+//     }
 
-    return Buffer.concat(chunks);
-}
-
+//     return Buffer.concat(chunks);
+// }
 
 export async function uploadToObjectStore(
     deploymentId: string,
     stream: any
 ) {
-    const buffer = await streamToBuffer(stream);
     await extractTar(
         deploymentId,
-        buffer
+        stream
     );
 
     // await s3.send(
