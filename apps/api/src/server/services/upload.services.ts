@@ -8,6 +8,12 @@ export const uploadService = async (deploymentDetails: uploadType, id: idType): 
 
     const { url, projectName } = deploymentDetails;
 
+    const found = await prisma.deployment.findFirst({
+        where: { projectName },
+    });
+    
+    if (found) throw new Error("Project name already in use");
+
     const newDeployment = await prisma.deployment.create({
         data: {
             userId: id,

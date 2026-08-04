@@ -1,8 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import Express, { Request, Response } from "express";
+import Express, { request, Request, Response } from "express";
 import serveFiles from "./services/files.service";
+import { getDeploymentId } from "./services/lookup.service";
 
 
 const app = Express();
@@ -15,7 +16,7 @@ function isAsset(path: string): boolean {
 app.get("/{*splat}", async (req: Request, res: Response) => {
 
     const hostname = req.hostname;
-    const deploymentId = hostname.split(".")[0] || "";
+    const deploymentId: string = await getDeploymentId(hostname.split(".")[0] || "");
 
     let filePath = req.path;
     if (filePath == "/") filePath = "/index.html";
@@ -59,9 +60,20 @@ app.get("/{*splat}", async (req: Request, res: Response) => {
     }
 });
 
+app.use((err: Error, req: Request, res: Response, next: Function) => {
+    console.error(err);
+
+    if (res.headersSent) return res.destroy(err);
+
+    return res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : "Internal Server Error... Caught in global error middleware @index.ts"
+    });
+
+});
+
+
 app.listen(3001, () => { console.log("proxy server is live") });
-
-
 
 
 
