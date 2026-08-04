@@ -1,51 +1,72 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import Express, { Request, Response } from "express";
-import { Readable, Writable } from "stream";
 import dotenv from "dotenv";
-
 dotenv.config();
+
+import Express, { Request, Response } from "express";
+import serveFiles from "./services/files.service";
+
 
 const app = Express();
 
-const s3 = new S3Client({
-    endpoint: process.env.MINIO_ENDPOINT!,
-    region: "auto",
-    credentials: {
-        accessKeyId: process.env.MINIO_ACCESS_KEY!,
-        secretAccessKey: process.env.MINIO_SECRET_KEY!,
-    },
-    forcePathStyle: true,
-})
 
-
-function objectStream(deploymentId: string, path: string) {
-    return new GetObjectCommand({
-        Bucket: process.env.MINIO_BUCKET!,
-        Key: `${deploymentId}${path}`,
-    });
+function isAsset(path: string): boolean {
+    return (/\.[^/]+$/.test(path) && !path.endsWith(".html"));
 }
-app.get("/*splat", async (req: Request, res: Response) => {
+
+app.get("/{*splat}", async (req: Request, res: Response) => {
+
     const hostname = req.hostname;
     const deploymentId = hostname.split(".")[0] || "";
-    const filePath = req.path;
+
+    let filePath = req.path;
+    if (filePath == "/") filePath = "/index.html";
+
     console.log(hostname, filePath);
+
     try {
-        const result = await s3.send(
-            objectStream(deploymentId, filePath)
-        );
-        if(result.ContentType){
-            res.setHeader("Content-Type", result.ContentType);
-        }
-        if (result.Body instanceof Readable) {
-            result.Body.pipe(res);
-        }
-        else {
-            res.status(500).send("Invalid stream");
-        }
+
+        await serveFiles(deploymentId, res, filePath);
+
     } catch (err) {
+
+        if (isAsset(filePath)) {
+            console.log("Asset doesn't exist");
+            return res.status(404).json({
+                success: false,
+                message: "Asset doesn't exist"
+            })
+        }
+
+
+        if ((err as any).Code == 'NoSuchKey') {
+            try {
+                return await serveFiles(deploymentId, res, "/index.html");
+            }
+            catch (error) {
+                console.log("Could not serve index.html", error);
+
+                return res.status(500).json({
+                    success: false,
+                    message: "Deployment not found"
+                });
+            }
+        }
+
         console.log(err);
-        res.status(404).send("Not Found");
+        res.status(500).json({
+            success: false,
+            message: "Some error occured",
+        });
     }
 });
 
 app.listen(3001, () => { console.log("proxy server is live") });
+
+
+
+
+
+
+// app.get("/index.html", (req, res) => {
+//     fs.createReadStream("index.html").pipe(res);
+// });
+// **remember this pattern**

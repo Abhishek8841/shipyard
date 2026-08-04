@@ -1,0 +1,16 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+import { S3Client } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({
+    endpoint: process.env.MINIO_ENDPOINT!,
+    region: "auto",
+    credentials: {
+        accessKeyId: process.env.MINIO_ACCESS_KEY!,
+        secretAccessKey: process.env.MINIO_SECRET_KEY!,
+    },
+    forcePathStyle: true,
+})
+
+export default s3;
