@@ -24,7 +24,8 @@ model Deployment {
   projectName String           @unique
   status      DeploymentStatus @default(PENDING)
   updatedAt   DateTime         @updatedAt
-  user        User             @relation(fields: [userId], references: [id])
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs Log[]
 }
 
 enum DeploymentStatus {
@@ -34,4 +35,13 @@ enum DeploymentStatus {
   DEPLOYING
   READY
   FAILED
+}
+
+model Log {
+  id String @id @default(cuid())
+  deploymentId String 
+  message String
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  @@index([deploymentId])
 }

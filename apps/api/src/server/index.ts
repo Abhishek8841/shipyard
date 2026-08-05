@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import urlRouter from "./routes/url.routes";
 import authRouter from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
+import deploymentRouter from "./routes/deployment.routes";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(cookieParser());
 
 app.use("/api/v1", urlRouter);
 app.use("/api/v1", authRouter);
+app.use("/api/v1", deploymentRouter);
 
 app.use((req: Request, res: Response) => {
     res.status(404).json({

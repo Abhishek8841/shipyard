@@ -3,6 +3,7 @@ import docker from "./client.docker";
 import { Writable } from "stream";
 import path from "path";
 import { redis_class } from "@shipyard/redis";
+import { prisma } from "@shipyard/database";
 
 const publisher = redis_class.getConnection();
 
@@ -43,8 +44,14 @@ export class DockerManager {
         console.log("output collection started");
 
         const stdoutBox = new Writable({
-            write(chunk, encoding, callback) {
+            async write(chunk, encoding, callback) {
                 const data = chunk.toString();
+                await prisma.log.create({
+                    data: {
+                        deploymentId,
+                        message: data,
+                    }
+                });
                 console.log(data);
                 stdout += data;
                 publisher.publish(`deployment:${deploymentId}`, data);
@@ -53,8 +60,14 @@ export class DockerManager {
         });
 
         const stderrBox = new Writable({
-            write(chunk, encoding, callback) {
+            async write(chunk, encoding, callback) {
                 const data = chunk.toString();
+                await prisma.log.create({
+                    data: {
+                        deploymentId,
+                        message: data,
+                    }
+                });
                 console.log(data);
                 stdout += data;
                 publisher.publish(`deployment:${deploymentId}`, data);
