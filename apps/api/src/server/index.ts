@@ -30,4 +30,4 @@ app.use((err: Error, req: Request, res: Response, next: Function) => {
     });
 });
 
-app.listen(3000, () => { console.log("server is live") });
+export default app;

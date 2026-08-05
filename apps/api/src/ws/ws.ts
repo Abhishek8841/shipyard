@@ -13,6 +13,7 @@ export async function initWebsocketServer(server: Server) {
     wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
         const id = getUserId(req);
         if (!id) {
+            console.log("exited @16")
             ws.close();
             return;
             // remember to return the callbacks**
@@ -21,6 +22,7 @@ export async function initWebsocketServer(server: Server) {
         const url = new URL(req.url!, "http://localhost:3000");
         const deploymentId = url.pathname.split("/")[1];
         if (!deploymentId) {
+            console.log("exited @16");
             ws.close();
             return;
         }
@@ -37,6 +39,7 @@ export async function initWebsocketServer(server: Server) {
             console.log(error + "Error in WS server @37 [probable cause - DB]")
         }
         if (!deployment) {
+            console.log("exited @16");
             ws.close();
             return;
         }
