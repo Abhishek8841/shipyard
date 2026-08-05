@@ -2,7 +2,7 @@ import { WebSocket } from "ws";
 import { sendLogSchema, sendLogType } from "./schema/server.schema";
 
 
-export class websocketManager {
+class websocketManager {
     private userList: Map<string, Set<WebSocket>> = new Map();
 
     private constructor() { }
@@ -55,3 +55,4 @@ export class websocketManager {
 }
 
 export const wsInstance = websocketManager.getInstance();
+

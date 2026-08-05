@@ -2,14 +2,15 @@ import { IncomingMessage, Server } from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
 import { getUserId } from "./utils/userId.util";
 import { wsInstance } from "./ws.manager";
+import { prisma } from "@shipyard/database";
+import { startLogSubscriber } from "./pubsub/subscriber";
 
 
-
-export function initWebsocketServer(server: Server) {
+export async function initWebsocketServer(server: Server) {
     const wss = new WebSocketServer({ server });
+    await startLogSubscriber();
 
-
-    wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
         const id = getUserId(req);
         if (!id) {
             ws.close();
@@ -17,12 +18,35 @@ export function initWebsocketServer(server: Server) {
             // remember to return the callbacks**
         }
 
-        wsInstance.addUserConnections(id, ws);
+        const url = new URL(req.url!, "http://localhost:3000");
+        const deploymentId = url.pathname.split("/")[1];
+        if (!deploymentId) {
+            ws.close();
+            return;
+        }
+        let deployment = undefined;
+        try {
+            deployment = await prisma.deployment.findFirst({
+                where: {
+                    id: deploymentId,
+                    userId: id
+                }
+            })
+        }
+        catch (error) {
+            console.log(error + "Error in WS server @37 [probable cause - DB]")
+        }
+        if (!deployment) {
+            ws.close();
+            return;
+        }
 
-        console.log(`Connected -> ${id}`);
+        wsInstance.addUserConnections(deploymentId, ws);
+
+        console.log(`Connected to deployment ID -> ${deploymentId}`);
 
         ws.on("message", (msg) => {
-
+            console.log(msg.toString());
         })
 
         ws.on("error", (error) => {
@@ -32,8 +56,8 @@ export function initWebsocketServer(server: Server) {
         })
 
         ws.on("close", () => {
-            wsInstance.removeUser(id, ws);
-            console.log(`connection closed -> ${id}`);
+            wsInstance.removeUser(deploymentId, ws);
+            console.log(`connection closed deploymentId-> ${deploymentId}`);
         })
 
     })

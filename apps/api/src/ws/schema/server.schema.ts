@@ -2,13 +2,8 @@ import zod from "zod";
 
 export const sendLogSchema = zod.object(
     {
-        userId: zod.string,
-        payload: zod.object(
-            {
-                deploymentId: zod.string,
-                log: zod.string,
-            }
-        )
+        deploymentId: zod.string(),
+        log: zod.string(),
     }
 )
 
