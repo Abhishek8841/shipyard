@@ -4,23 +4,27 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/server/index.ts"
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "@shipyard/database": "^1.0.0",
     "@shipyard/redis": "^1.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.0.2",
+    "cookie": "^2.0.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "ws": "^8.21.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cookie": "^0.6.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10"
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/ws": "^8.18.1"
   }
 }

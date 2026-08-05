@@ -9,7 +9,6 @@
   "devDependencies": {
     "@shipyard/builder": "^1.0.0",
     "@types/node": "^26.1.2",
-    "@types/tar-stream": "^3.1.4",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   }

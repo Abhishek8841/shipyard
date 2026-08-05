@@ -2,6 +2,10 @@ import { Container, Exec } from "dockerode";
 import docker from "./client.docker";
 import { Writable } from "stream";
 import path from "path";
+import { redis_class } from "@shipyard/redis";
+import { prisma } from "@shipyard/database";
+
+const publisher = redis_class.getConnection();
 
 
 export class DockerManager {
@@ -32,7 +36,7 @@ export class DockerManager {
         return container;
     }
 
-    static async collectOutput(exec: Exec) {
+    static async collectOutput(exec: Exec, deploymentId: string) {
         const stream = await exec.start({});
         let stdout = "";
         let stderr = "";
@@ -40,15 +44,33 @@ export class DockerManager {
         console.log("output collection started");
 
         const stdoutBox = new Writable({
-            write(chunk, encoding, callback) {
-                stdout += chunk;
+            async write(chunk, encoding, callback) {
+                const data = chunk.toString();
+                await prisma.log.create({
+                    data: {
+                        deploymentId,
+                        message: data,
+                    }
+                });
+                console.log(data);
+                stdout += data;
+                publisher.publish(`deployment:${deploymentId}`, data);
                 callback();
             },
         });
 
         const stderrBox = new Writable({
-            write(chunk, encoding, callback) {
-                stderr += chunk;
+            async write(chunk, encoding, callback) {
+                const data = chunk.toString();
+                await prisma.log.create({
+                    data: {
+                        deploymentId,
+                        message: data,
+                    }
+                });
+                console.log(data);
+                stdout += data;
+                publisher.publish(`deployment:${deploymentId}`, data);
                 callback();
             }
         });
@@ -73,7 +95,7 @@ export class DockerManager {
         };
     }
 
-    static async startContainer(container: Container, gitUrl: string) {
+    static async startContainer(container: Container, gitUrl: string, deploymentId: string) {
         console.log("starting exec");
         const exec = await container.exec({
             Cmd: ["/bin/bash", "/builder/main.sh", gitUrl],
@@ -83,7 +105,7 @@ export class DockerManager {
         });
         console.log("exec done", "+", "going to output collection now");
 
-        return await this.collectOutput(exec);
+        return await this.collectOutput(exec, deploymentId);
     }
 
     static async streamLogs() {

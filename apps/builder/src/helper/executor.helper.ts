@@ -11,7 +11,7 @@ type executorReturnType =
 export async function executor(gitUrl: string, deploymentId: string): Promise<executorReturnType> {
     const container = await DockerManager.createContainer();
     try {
-        const result = await DockerManager.startContainer(container, gitUrl);
+        const result = await DockerManager.startContainer(container, gitUrl, deploymentId);
 
         if (result.exitCode != 0) throw new Error(result.stderr || "Build Failed");
 
