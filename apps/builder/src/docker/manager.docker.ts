@@ -109,10 +109,6 @@ export class DockerManager {
         return await this.collectOutput(exec, deploymentId);
     }
 
-    static async streamLogs() {
-
-    }
-
     static async getBuildArtifacts(container: Container, directory: string) {
         console.log(`/app/${directory}/dist`);
         const stream = await container.getArchive({
