@@ -8,8 +8,11 @@ type executorReturnType =
         message: string
     };
 
-export async function executor(gitUrl: string, deploymentId: string, directory: string): Promise<executorReturnType> {
-    const container = await DockerManager.createContainer();
+export async function executor(gitUrl: string, deploymentId: string, directory: string, env: Record<string, string>): Promise<executorReturnType> {
+    const ENV = Object.entries(env).map(([key, value]) => `${key}=${value}`);
+    console.log(ENV);
+
+    const container = await DockerManager.createContainer(ENV);
     try {
         const result = await DockerManager.startContainer(container, gitUrl, deploymentId, directory);
 

@@ -1,14 +1,16 @@
+import { JsonObject } from "../../../../packages/database/dist/src/generated/prisma/internal/prismaNamespace";
 import { deploymentQueue } from "./upload.queue";
 
 class QueueManager {
-    addDeployment(deploymentId: string, projectName: string, gitUrl: string, directory: string) {
+    addDeployment(deploymentId: string, projectName: string, gitUrl: string, directory: string, env: JsonObject) {
         return deploymentQueue.add(
             "upload",
             {
                 deploymentId,
                 projectName,
                 gitUrl,
-                directory
+                directory, 
+                env
             },
             {
                 attempts: 3,

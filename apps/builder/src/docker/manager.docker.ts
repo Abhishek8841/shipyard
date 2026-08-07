@@ -9,12 +9,13 @@ const publisher = redis_class.getConnection();
 
 
 export class DockerManager {
-    static async createContainer() {
+    static async createContainer(ENV: string[]) {
         console.log("inside manager.docker.ts -> createContainer");
         const mountPath = path.join(__dirname, "main.sh");
         console.log(mountPath);
         const container = await docker.createContainer(
             {
+                Env: ENV,
                 Image: "node:22",
                 WorkingDir: "/app",
                 Cmd: ["sleep", "infinity"],

@@ -27,6 +27,7 @@ model Deployment {
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs Log[]
   directory String @default(".")
+  env Json?
 }
 
 enum DeploymentStatus {

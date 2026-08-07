@@ -3,6 +3,7 @@ import { uploadType } from "../schema/upload.schema";
 import { idType } from "../schema/auth.schema";
 import { DeploymentStatus } from "@shipyard/database/status";
 import { queueFunctions } from "../../queue/manager.queue";
+import { JsonObject } from "../../../../../packages/database/dist/src/generated/prisma/internal/prismaNamespace";
 
 export const uploadService = async (deploymentDetails: uploadType, id: idType): Promise<string> => {
 
@@ -15,6 +16,7 @@ export const uploadService = async (deploymentDetails: uploadType, id: idType): 
     if (found) throw new Error("Project name already in use");
 
     const directory = deploymentDetails.directory ? deploymentDetails.directory : ".";
+    const env =  deploymentDetails.env as JsonObject; 
 
     const newDeployment = await prisma.deployment.create({
         data: {
@@ -23,11 +25,12 @@ export const uploadService = async (deploymentDetails: uploadType, id: idType): 
             gitUrl: url,
             projectName,
             status: DeploymentStatus.QUEUED,
+            env
         }
     });
 
     try {
-        await queueFunctions.addDeployment(newDeployment.id, newDeployment.projectName, newDeployment.gitUrl, directory);
+        await queueFunctions.addDeployment(newDeployment.id, newDeployment.projectName, newDeployment.gitUrl, directory, env);
     } catch (error) {
         await prisma.deployment.update({
             where: { id: newDeployment.id },
