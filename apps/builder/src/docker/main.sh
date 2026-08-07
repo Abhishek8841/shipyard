@@ -9,12 +9,13 @@ apt-get install -y git
 
 echo "Cloning repository..."
 
-rm -rf /app/* /app/.[!.]* /app/..?*
+ls
 
-
-cd /app
+echo "$2"
 
 git clone "$1" .
+
+cd $2
 
 echo "Installing dependencies..."
 

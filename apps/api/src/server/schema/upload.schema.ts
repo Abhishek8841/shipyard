@@ -4,6 +4,7 @@ export const uploadSchema  = z.object(
     {
         url: z.string(),
         projectName: z.string(),
+        directory: z.string().optional(),
     }
 )
 

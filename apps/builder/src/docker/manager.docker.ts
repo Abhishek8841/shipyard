@@ -95,10 +95,10 @@ export class DockerManager {
         };
     }
 
-    static async startContainer(container: Container, gitUrl: string, deploymentId: string) {
+    static async startContainer(container: Container, gitUrl: string, deploymentId: string, directory: string) {
         console.log("starting exec");
         const exec = await container.exec({
-            Cmd: ["/bin/bash", "/builder/main.sh", gitUrl],
+            Cmd: ["/bin/bash", "/builder/main.sh", gitUrl, directory],
             AttachStderr: true,
             AttachStdout: true,
             Tty: false,
@@ -112,9 +112,10 @@ export class DockerManager {
 
     }
 
-    static async getBuildArtifacts(container: Container) {
+    static async getBuildArtifacts(container: Container, directory: string) {
+        console.log(`/app/${directory}/dist`);
         const stream = await container.getArchive({
-            path: "/app/dist",
+            path: `/app/${directory}/dist`,
         })
         // console.log("Stream archive returned by docker is ", stream);
         return stream;

@@ -6,7 +6,7 @@ import { executor } from "../helper/executor.helper";
 
 export async function uploader(job: Job<jobArgs>) {
     try {
-        const { deploymentId, projectName, gitUrl } = job.data;
+        const { deploymentId, projectName, gitUrl, directory } = job.data;
         console.log("job received with following params:-> ", job.data)
 
         await prisma.deployment.update({
@@ -16,7 +16,7 @@ export async function uploader(job: Job<jobArgs>) {
             }
         });
 
-        await executor(gitUrl, deploymentId);
+        await executor(gitUrl, deploymentId, directory);
 
         await prisma.deployment.update({
             where: { id: deploymentId },

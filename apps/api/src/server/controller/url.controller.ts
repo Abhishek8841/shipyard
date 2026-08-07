@@ -24,6 +24,7 @@ export const uploadToQueue = async (req: Request, res: Response) => {
                 url: deploymentDetails.url,
                 projectName: deploymentDetails.projectName,
                 id: DeploymentId,
+                directory: deploymentDetails.directory ? deploymentDetails.directory : ".",
             }
         })
     }

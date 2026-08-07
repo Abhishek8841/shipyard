@@ -8,14 +8,14 @@ type executorReturnType =
         message: string
     };
 
-export async function executor(gitUrl: string, deploymentId: string): Promise<executorReturnType> {
+export async function executor(gitUrl: string, deploymentId: string, directory: string): Promise<executorReturnType> {
     const container = await DockerManager.createContainer();
     try {
-        const result = await DockerManager.startContainer(container, gitUrl, deploymentId);
+        const result = await DockerManager.startContainer(container, gitUrl, deploymentId, directory);
 
         if (result.exitCode != 0) throw new Error(result.stderr || "Build Failed");
 
-        const stream = await DockerManager.getBuildArtifacts(container);
+        const stream = await DockerManager.getBuildArtifacts(container, directory);
 
         await uploadToObjectStore(deploymentId, stream);
 

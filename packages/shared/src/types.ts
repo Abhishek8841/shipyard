@@ -1,5 +1,6 @@
 export type jobArgs = {
     deploymentId: string,
     projectName: string,
-    gitUrl: string
+    gitUrl: string,
+    directory: string
 }

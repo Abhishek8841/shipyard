@@ -11,12 +11,15 @@ export const uploadService = async (deploymentDetails: uploadType, id: idType): 
     const found = await prisma.deployment.findFirst({
         where: { projectName },
     });
-    
+
     if (found) throw new Error("Project name already in use");
+
+    const directory = deploymentDetails.directory ? deploymentDetails.directory : ".";
 
     const newDeployment = await prisma.deployment.create({
         data: {
             userId: id,
+            directory,
             gitUrl: url,
             projectName,
             status: DeploymentStatus.QUEUED,
@@ -24,7 +27,7 @@ export const uploadService = async (deploymentDetails: uploadType, id: idType): 
     });
 
     try {
-        await queueFunctions.addDeployment(newDeployment.id, newDeployment.projectName, newDeployment.gitUrl);
+        await queueFunctions.addDeployment(newDeployment.id, newDeployment.projectName, newDeployment.gitUrl, directory);
     } catch (error) {
         await prisma.deployment.update({
             where: { id: newDeployment.id },

@@ -1,13 +1,14 @@
 import { deploymentQueue } from "./upload.queue";
 
 class QueueManager {
-    addDeployment(deploymentId: string, projectName: string, gitUrl: string) {
+    addDeployment(deploymentId: string, projectName: string, gitUrl: string, directory: string) {
         return deploymentQueue.add(
             "upload",
             {
                 deploymentId,
                 projectName,
-                gitUrl
+                gitUrl,
+                directory
             },
             {
                 attempts: 3,
