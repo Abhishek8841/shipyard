@@ -1,0 +1,54 @@
+.logs-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.back-link:hover {
+  color: #000;
+}
+
+.logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.logs-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ws-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+}
+
+.ws-connected,
+.ws-connecting,
+.ws-disconnected {
+  color: inherit;
+}
+
+.loading {
+  text-align: center;
+  color: #999;
+  padding: 40px;
+}
+
+.error-msg {
+  text-align: center;
+  color: #dc2626;
+  padding: 40px;
+}

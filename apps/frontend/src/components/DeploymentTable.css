@@ -1,0 +1,92 @@
+.table-wrapper {
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.deploy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.deploy-table thead {
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.deploy-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-weight: 500;
+  color: #666;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.deploy-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.deploy-table tr:last-child td {
+  border-bottom: none;
+}
+
+.deploy-table tr:hover {
+  background: #fafafa;
+}
+
+.cell-project {
+  font-weight: 500;
+  color: #000;
+}
+
+.cell-id {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: #999;
+}
+
+.cell-url {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.url-link-sm {
+  color: #000;
+  text-decoration: underline;
+  font-size: 12px;
+}
+
+.url-link-sm:hover {
+  color: #333;
+}
+
+.cell-date {
+  color: #666;
+}
+
+.cell-action {
+  text-align: right;
+}
+
+.view-link {
+  color: #000;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.view-link:hover {
+  text-decoration: underline;
+}
+
+.empty-state {
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
