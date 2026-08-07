@@ -11,18 +11,18 @@ const publisher = redis_class.getConnection();
 export class DockerManager {
     static async createContainer(ENV: string[]) {
         console.log("inside manager.docker.ts -> createContainer");
-        const mountPath = path.join(__dirname, "main.sh");
-        console.log(mountPath);
+        // const mountPath = path.join(__dirname, "main.sh");
+        // console.log(mountPath);
         const container = await docker.createContainer(
             {
                 Env: ENV,
-                Image: "node:22",
-                WorkingDir: "/app",
+                Image: "shipyard-builder:latest",
+                // WorkingDir: "/app",
                 Cmd: ["sleep", "infinity"],
                 Tty: false,
                 HostConfig: {
                     AutoRemove: false,
-                    Binds: [`${mountPath}:/builder/main.sh:ro`],
+                    // Binds: [`${mountPath}:/builder/main.sh:ro`],
                     // NetworkMode: "none",
                     // CapDrop: ["ALL"],
                     NanoCpus: 1_000_000_000,

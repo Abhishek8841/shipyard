@@ -2,10 +2,7 @@
 
 set -e
 
-echo "Installing required tools..."
-
-apt-get update
-apt-get install -y git
+echo "kuchu puchu this is the custom image"
 
 echo "Cloning repository..."
 
