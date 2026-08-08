@@ -7,7 +7,17 @@ import { startLogSubscriber } from "./pubsub/subscriber";
 
 
 export async function initWebsocketServer(server: Server) {
-    const wss = new WebSocketServer({ server });
+    const allowedOrigins = [
+        "http://localhost:4000",
+        "https://shipyard.abatra.me",
+    ]
+    const wss = new WebSocketServer({
+        server, verifyClient(info, cb) {
+            if (allowedOrigins.includes(info.origin)) cb(true);
+            else cb(false);
+        }
+    });
+
     await startLogSubscriber();
 
     wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {

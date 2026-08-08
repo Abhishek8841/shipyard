@@ -60,7 +60,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/shipyard
