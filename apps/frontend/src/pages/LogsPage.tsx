@@ -30,8 +30,8 @@ export default function LogsPage() {
   useEffect(() => {
     if (!id) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/${id}`;
+    const wsBase = import.meta.env.VITE_WS_URL || "ws://localhost:3010";
+    const wsUrl = `${wsBase}/${id}`;
 
     setWsStatus("connecting");
     const ws = new WebSocket(wsUrl);
