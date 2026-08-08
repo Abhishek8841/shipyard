@@ -58,7 +58,7 @@ services:
     command: sh -c "npx prisma migrate deploy --schema ../../packages/database/prisma/schema.prisma --config ../../packages/database/prisma.config.ts && node dist/index.js"    
     container_name: shipyard-api
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
