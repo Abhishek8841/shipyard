@@ -1,0 +1,121 @@
+services: 
+
+  redis:
+    image: redis:7
+    container_name: shipyard-redis
+    restart: always
+    healthcheck: 
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 3
+      timeout: 3s
+    
+
+  postgres:
+    image: postgres:17
+    container_name: shipyard-postgres-db
+    restart: always
+
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=shipyard
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shipyard"]
+      interval: 7s
+      timeout: 10s
+      retries: 5
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", http://localhost:9000/minio/health/live]
+      interval: 10s
+      timeout: 7s
+      retries: 5
+
+  api:
+    build: 
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    restart: always
+    command: sh -c "npx prisma migrate deploy --schema ../../packages/database/prisma/schema.prisma --config ../../packages/database/prisma.config.ts && node dist/index.js"    
+    container_name: shipyard-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/shipyard
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis: 
+        condition: service_healthy
+
+  builder:
+    build: 
+      context: .
+      dockerfile: ./apps/builder/Dockerfile
+    restart: always
+    container_name: shipyard-builder-main
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/shipyard
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis: 
+        condition: service_healthy
+      minio: 
+        condition: service_healthy
+
+
+
+  proxy:
+    build: 
+      context: .
+      dockerfile: ./apps/proxy/Dockerfile
+    restart: always
+    container_name: shipyard-proxy
+    ports:
+      - "3001:3001"
+    environment:
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=vercel-builds
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/shipyard
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio: 
+        condition: service_healthy
+
+volumes:
+  postgres-data: 
+  minio_data:

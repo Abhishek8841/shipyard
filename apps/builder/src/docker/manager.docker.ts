@@ -16,7 +16,7 @@ export class DockerManager {
         const container = await docker.createContainer(
             {
                 Env: ENV,
-                Image: "shipyard-builder:latest",
+                Image: "shipyard-builder-image:latest",
                 // WorkingDir: "/app",
                 Cmd: ["sleep", "infinity"],
                 Tty: false,

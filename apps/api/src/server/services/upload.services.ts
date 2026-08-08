@@ -16,7 +16,8 @@ export const uploadService = async (deploymentDetails: uploadType, id: idType): 
     if (found) throw new Error("Project name already in use");
 
     const directory = deploymentDetails.directory ? deploymentDetails.directory : ".";
-    const env =  deploymentDetails.env as JsonObject; 
+    let env =  deploymentDetails.env as JsonObject; 
+    if(!env) env = {};
 
     const newDeployment = await prisma.deployment.create({
         data: {
