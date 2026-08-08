@@ -38,8 +38,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-          <div style={{ flex: 1 }}>
+        <>
+          <div style={{ paddingBottom: 60 }}>
             <Routes>
               <Route
                 path="/login"
@@ -77,7 +77,7 @@ export default function App() {
             </Routes>
           </div>
           <Footer />
-        </div>
+        </>
       </AuthProvider>
     </BrowserRouter>
   );

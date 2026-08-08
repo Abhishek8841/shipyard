@@ -1,6 +1,7 @@
 import type { User, Deployment, Log } from "../types";
 
-const BASE = "/api/v1";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const BASE = `${BACKEND_URL}/api/v1`;
 
 export async function signup(
   username: string,
