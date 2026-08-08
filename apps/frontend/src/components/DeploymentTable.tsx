@@ -45,9 +45,8 @@ export default function DeploymentTable({ deployments }: Props) {
         </thead>
         <tbody>
           {deployments.map((d) => {
-            const deployDomain = import.meta.env.VITE_DEPLOY_DOMAIN || "localhost";
-            const deployPort = import.meta.env.VITE_DEPLOY_PORT || "3001";
-            const url = `http://${d.projectName}.${deployDomain}:${deployPort}`;
+            const deployUrl = import.meta.env.VITE_DEPLOY_URL || "http://localhost:3020";
+            const url = deployUrl.replace("://", `://${d.projectName}.`);
             return (
               <tr key={d.id}>
                 <td className="cell-project">{d.projectName}</td>
@@ -62,7 +61,7 @@ export default function DeploymentTable({ deployments }: Props) {
                     rel="noopener noreferrer"
                     className="url-link-sm"
                   >
-                    {d.projectName}.{deployDomain}:{deployPort} ↗
+                    {url.replace("http://", "").replace("https://", "")} ↗
                   </a>
                 </td>
                 <td className="cell-date">{formatDate(d.createdAt)}</td>

@@ -65,9 +65,8 @@ export default function DeploymentDetailsPage() {
   }
 
   const envEntries = deployment.env ? Object.entries(deployment.env) : [];
-  const deployDomain = import.meta.env.VITE_DEPLOY_DOMAIN || "localhost";
-  const deployPort = import.meta.env.VITE_DEPLOY_PORT || "3001";
-  const deployedUrl = `http://${deployment.projectName}.${deployDomain}:${deployPort}`;
+  const deployUrl = import.meta.env.VITE_DEPLOY_URL || "http://localhost:3020";
+  const deployedUrl = deployUrl.replace("://", `://${deployment.projectName}.`);
 
   return (
     <div>
