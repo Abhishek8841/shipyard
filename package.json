@@ -2,6 +2,12 @@
   "name": "shipyard",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "generate:db" : "npm run generate -w @shipyard/database",
+    "build:packages": "npm run generate:db && npm run build -w @shipyard/database && npm run build -w @shipyard/redis && npm run build -w @shipyard/shared",
+    "build:apps": "npm run build -w @shipyard/api && npm run build -w @shipyard/builder && npm run build -w @shipyard/proxy",
+    "build": "npm run build:packages && npm run build:apps"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
