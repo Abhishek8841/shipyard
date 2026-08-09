@@ -17,7 +17,7 @@ export class DockerManager {
             {
                 Env: ENV,
                 // Image: "shipyard-builder-image:latest",
-                Image: "abhishek8841/shipyard-builder-image",
+                Image: "ghcr.io/abhishek8841/shipyard-builder-image:latest",
                 // WorkingDir: "/app",
                 Cmd: ["sleep", "infinity"],
                 Tty: false,
