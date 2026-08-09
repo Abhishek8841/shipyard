@@ -6,6 +6,6 @@ export const getDeploymentId = async (projectName: string): Promise<string> => {
     const deployment = await prisma.deployment.findFirst({
         where: { projectName }
     })
-    if (!deployment) throw new Error("No such deployment exists");
+    if (!deployment) throw new Error("No such deployment exists amigo");
     return deployment.id;
 }
