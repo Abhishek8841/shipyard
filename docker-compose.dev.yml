@@ -107,7 +107,7 @@ services:
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=vercel-builds
+      - MINIO_BUCKET=${MINIO_BUCKET}
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/shipyard
     depends_on:
