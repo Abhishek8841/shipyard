@@ -17,7 +17,7 @@ Built to understand the internal mechanics of deployment platforms -- how source
   - [Tar Archives and Build Artifact Extraction](#tar-archives-and-build-artifact-extraction)
   - [Object Storage and S3-Compatible APIs](#object-storage-and-s3-compatible-apis)
   - [Redis, BullMQ, and Asynchronous Processing](#redis-bullmq-and-asynchronous-processing)
-  - [WebSockets and Real-Time Build Logs](#websockets-and-real-time-build-logs)
+  - [Build Log Pipeline](#build-log-pipeline)
   - [Reverse Proxy and Artifact Serving](#reverse-proxy-and-artifact-serving)
   - [CI/CD Pipeline](#cicd-pipeline)
   - [Production Deployment](#production-deployment)
@@ -544,33 +544,135 @@ The `@shipyard/redis` package exposes a `RedisManager` singleton that maintains 
 - **General connection** -- used for Pub/Sub operations.
 - **Queue connection** -- configured with `maxRetriesPerRequest: null` as required by BullMQ (BullMQ needs a connection that never gives up on blocked commands like `BRPOPLPUSH`).
 
-## WebSockets and Real-Time Build Logs
+## Build Log Pipeline
 
-Shipyard uses WebSockets to deliver build logs to the frontend in real time as they are produced inside the Docker container.
+Shipyard captures, persists, and delivers build logs in real time. Every line of output produced inside a Docker container is simultaneously written to PostgreSQL for permanent storage and published to Redis Pub/Sub for live delivery to connected browsers via WebSocket.
 
-### Why Not Polling
+### Why WebSockets Instead of Polling
 
 Build log output is continuous and unpredictable in timing. Polling at fixed intervals would either miss log lines (if the interval is too long) or waste bandwidth (if too short). WebSockets provide a persistent bidirectional channel where the server pushes log lines as soon as they arrive.
 
-### Architecture
-
-The real-time log pipeline involves four components connected through Redis Pub/Sub:
+### End-to-End Architecture
 
 ```mermaid
 sequenceDiagram
     participant D as Docker Container
     participant B as Builder Worker
+    participant PG as PostgreSQL
     participant R as Redis Pub/Sub
     participant A as API (WS Server)
     participant F as Frontend
 
     D->>B: stdout/stderr stream (demuxed)
+    B->>PG: prisma.log.create() (persist)
     B->>R: PUBLISH deployment:{id} logLine
     R->>A: PMESSAGE deployment:* channel message
     A->>F: WebSocket send({deploymentId, log})
+    Note over F: LogTerminal renders live logs
+    F->>A: GET /api/v1/deployment/logs/:id (on page load)
+    A->>PG: Query persisted logs
+    PG-->>A: Log rows
+    A-->>F: Historical logs (REST response)
 ```
 
-### Server Implementation
+```
+Docker Container (stdout/stderr)
+    │
+    ▼
+docker.modem.demuxStream()
+    ├── stdoutBox (custom Writable)
+    └── stderrBox (custom Writable)
+            │
+            ├──── prisma.log.create()  →  PostgreSQL (persistence)
+            │
+            └──── publisher.publish()  →  Redis Pub/Sub
+                                              │
+                                              ▼
+                                    API subscriber (psubscribe)
+                                              │
+                                              ▼
+                                    websocketManager.sendToUser()
+                                              │
+                                              ▼
+                                    Frontend (WebSocket onmessage)
+                                              │
+                                              ▼
+                                    LogTerminal component
+```
+
+### Step 1: Capture -- Docker Exec Demultiplexing
+
+When the builder runs `/builder/main.sh` inside the Docker container, the exec stream carries both stdout and stderr multiplexed into a single stream (a Docker protocol detail when `Tty: false`). The builder uses `docker.modem.demuxStream()` to split this into two separate channels:
+
+```typescript
+docker.modem.demuxStream(
+    stream,    // multiplexed exec output
+    stdoutBox, // receives stdout chunks
+    stderrBox  // receives stderr chunks
+);
+```
+
+Setting `Tty: false` is critical here. With `Tty: true`, Docker merges stdout and stderr into a single stream with no framing, making demultiplexing impossible. With `Tty: false`, Docker prepends an 8-byte header to each frame indicating the stream type (stdout vs. stderr) and the frame length, which `demuxStream` uses to route chunks correctly.
+
+### Step 2: Dual-Write -- Custom Writable Streams
+
+Both `stdoutBox` and `stderrBox` are custom `Writable` streams that perform the same two operations on every chunk:
+
+```typescript
+const stdoutBox = new Writable({
+    async write(chunk, encoding, callback) {
+        const data = chunk.toString();
+        // 1. Persist to PostgreSQL
+        await prisma.log.create({
+            data: { deploymentId, message: data }
+        });
+        // 2. Publish to Redis for real-time delivery
+        publisher.publish(`deployment:${deploymentId}`, data);
+        callback();
+    },
+});
+```
+
+This dual-write strategy means every log line is simultaneously:
+
+- **Persisted** -- written to the `Log` table in PostgreSQL, creating a permanent record that survives process restarts, Redis eviction, and WebSocket disconnections.
+- **Published** -- sent to a Redis Pub/Sub channel for immediate delivery to any connected frontend clients.
+
+The `callback()` call at the end signals that the writable is ready for the next chunk. Because the `write` function is `async`, backpressure is applied naturally -- if PostgreSQL or Redis is slow, the Docker exec stream pauses until the write completes.
+
+### Step 3: Persistence -- The Log Model
+
+The `Log` model in Prisma stores each log line as a separate row:
+
+```prisma
+model Log {
+  id           String     @id @default(cuid())
+  deploymentId String
+  message      String
+  createdAt    DateTime   @default(now())
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  @@index([deploymentId])
+}
+```
+
+Key design decisions:
+
+- **One row per chunk** -- each `write()` invocation creates a separate row. Chunks correspond to Docker exec output frames, which are typically one or a few lines.
+- **Indexed by `deploymentId`** -- allows efficient retrieval of all logs for a given deployment.
+- **Cascade delete** -- when a deployment is deleted, all its logs are automatically removed.
+- **`createdAt` timestamp** -- preserves the ordering of log output, since `cuid()` IDs are not guaranteed to sort chronologically.
+
+### Step 4: Real-Time Delivery -- Redis → WebSocket → Browser
+
+The published message travels through three hops:
+
+1. **Redis Pub/Sub** -- the builder publishes to `deployment:{deploymentId}`. This is a fire-and-forget operation; if no subscriber is listening, the message is silently dropped (which is fine because the log is already persisted in PostgreSQL).
+
+2. **API subscriber** -- a dedicated Redis connection (duplicated from the main connection to avoid blocking) uses `psubscribe("deployment:*")` to listen on all deployment channels. On each `pmessage`, it extracts the deployment ID from the channel name and calls `wsInstance.sendToUser()`. This design means the builder and the API do not need to communicate directly -- the builder publishes to Redis, the API subscribes from Redis, and either can be restarted independently.
+
+3. **WebSocket delivery** -- the `websocketManager` looks up all connected sockets for that deployment ID and sends a JSON payload `{ deploymentId, log }` validated against a Zod schema. Dead sockets (`readyState !== OPEN`) are terminated and removed from the set.
+
+### WebSocket Server
 
 The WebSocket server is attached to the same HTTP server as the Express API using the `ws` library:
 
@@ -588,8 +690,6 @@ On connection, the server:
 3. Verifies that the deployment belongs to the authenticated user (PostgreSQL query).
 4. Registers the WebSocket in a `websocketManager` singleton that maps deployment IDs to sets of connected sockets.
 
-### WebSocket Manager
-
 The `websocketManager` is a singleton that tracks active connections per deployment:
 
 ```typescript
@@ -601,15 +701,39 @@ class websocketManager {
 
 `sendToUser` validates outgoing messages against a Zod schema before sending, and terminates dead sockets that are no longer in `OPEN` state.
 
-### Redis Pub/Sub Bridge
+### Step 5: Display -- Two-Source Rendering
 
-A dedicated Redis subscriber listens on `deployment:*` using pattern-based subscription (`psubscribe`). When a message arrives, it extracts the deployment ID from the channel name and calls `wsInstance.sendToUser()` to forward the log line to all connected clients watching that deployment.
+The frontend's `LogsPage` component establishes a WebSocket connection to `ws://{API_HOST}/{deploymentId}` on mount and merges two log sources:
 
-This design means the builder and the API do not need to communicate directly. The builder publishes to Redis, the API subscribes from Redis, and either can be restarted independently.
+1. **Historical logs** -- fetched via REST API (`GET /api/v1/deployment/logs/:id`) on page load. These are the persisted `Log` rows from PostgreSQL, providing all output from before the page was opened.
 
-### Frontend
+2. **Live logs** -- received via WebSocket in real time. These are appended to a separate `liveLogs` state array as they arrive. The connection status (connecting, connected, disconnected) is shown to the user.
 
-The `LogsPage` component establishes a WebSocket connection to `ws://{API_HOST}/{deploymentId}` on mount. Incoming messages are parsed as JSON and appended to a live log feed displayed in a terminal-style `LogTerminal` component. The connection status (connecting, connected, disconnected) is shown to the user.
+The `LogTerminal` component renders both sources sequentially -- historical logs first (with database-assigned IDs), then live logs (with index-based keys). Line numbers continue sequentially across both sources:
+
+```typescript
+// Historical logs: lines 1 through logs.length
+{logs.map((log, i) => (
+    <span className="line-number">{i + 1}</span>
+))}
+
+// Live logs: lines logs.length+1 onward
+{liveLogs.map((msg, i) => (
+    <span className="line-number">{logs.length + i + 1}</span>
+))}
+```
+
+This two-source approach ensures that a user who opens the logs page mid-build sees the complete output: everything that already happened (from PostgreSQL) plus everything happening now (from the WebSocket). A user who opens the page after the build finishes sees the full log from PostgreSQL alone, with the WebSocket contributing nothing.
+
+### Why Dual-Write Instead of Read-Through
+
+An alternative architecture would skip PostgreSQL writes during the build and instead read the logs from Redis (e.g., using a Redis Stream or List). The dual-write approach was chosen because:
+
+- **Redis Pub/Sub is ephemeral** -- messages are delivered only to currently connected subscribers. If no one is listening, the message is lost. Persisting to PostgreSQL first guarantees no log line is ever dropped.
+- **No additional read path** -- the REST API for historical logs queries PostgreSQL directly. There is no need for a separate log retrieval mechanism.
+- **Simplicity** -- the builder writes once to both destinations in the same function. There is no need for a separate log aggregation service or a consumer that drains Redis into PostgreSQL after the fact.
+
+The tradeoff is write amplification: every log line incurs both a PostgreSQL `INSERT` and a Redis `PUBLISH`. For the expected build volume (seconds to low minutes of output per deployment), this is not a bottleneck. For higher throughput, batching PostgreSQL inserts (noted in Future Improvements) would reduce per-line overhead.
 
 ## Reverse Proxy and Artifact Serving
 
