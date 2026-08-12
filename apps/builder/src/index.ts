@@ -1,7 +1,7 @@
 import { redis_class } from "@shipyard/redis"
 import { Worker } from "bullmq"
 import { uploader } from "./processor/uploader.processor";
-
+import "./metric.server"
 
 const upload_worker = new Worker(
     "deploymentQueue",
