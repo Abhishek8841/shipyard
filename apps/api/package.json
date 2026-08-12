@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@shipyard/database": "^1.0.0",
+    "@shipyard/metrics": "^1.0.0",
     "@shipyard/redis": "^1.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.0.2",
