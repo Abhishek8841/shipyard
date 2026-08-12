@@ -4,6 +4,7 @@ export const register = new client.Registry();
 
 client.collectDefaultMetrics({ register });
 
+// api
 export const httpRequestCounter =
     new client.Counter({
         name: "http_requests_total",
@@ -12,7 +13,7 @@ export const httpRequestCounter =
         registers: [register]
     });
 
-
+// api
 export const deploymentCounter =
     new client.Counter({
         name: "deployments_created_total",
@@ -20,7 +21,7 @@ export const deploymentCounter =
         registers: [register]
     });
 
-
+// builder
 export const deploymentsFailed =
     new client.Counter({
         name: "deployments_failed_total",
@@ -28,6 +29,7 @@ export const deploymentsFailed =
         registers: [register]
     })
 
+// builder
 export const deploymentsCompleted =
     new client.Counter({
         name: "deployments_completed_total",
@@ -35,7 +37,7 @@ export const deploymentsCompleted =
         registers: [register]
     })
 
-
+// builder
 export const activeJobs =
     new client.Gauge({
         name: "active_build_jobs",
@@ -43,7 +45,7 @@ export const activeJobs =
         registers: [register]
     });
 
-
+// builder
 export const buildDuration =
     new client.Histogram({
         name: "build_duration_seconds",
@@ -52,7 +54,7 @@ export const buildDuration =
         registers: [register]
     });
 
-
+// idk?
 export const deploymentQueueDuration =
     new client.Histogram({
         name: "deployment_queue_duration_seconds",
@@ -61,7 +63,7 @@ export const deploymentQueueDuration =
         buckets: [1, 5, 10, 30, 60, 120]
     });
 
-    
+// builder
 export const dockerBuildErrors =
     new client.Counter({
         name: "docker_build_errors_total",

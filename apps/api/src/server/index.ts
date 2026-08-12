@@ -5,6 +5,8 @@ import authRouter from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
 import deploymentRouter from "./routes/deployment.routes";
 import cors from "cors"
+import { register } from "@shipyard/metrics";
+import { metricsMiddleware } from "./middleware/metrics.middleware";
 
 dotenv.config();
 
@@ -21,6 +23,19 @@ app.use(cors({
     },
     credentials: true,
 }));
+
+
+app.get("/metrics", async (req: Request, res: Response) => {
+    res.set(
+        "Content-Type",
+        register.contentType
+    );
+    res.end(
+        await register.metrics()
+    );
+})
+
+app.use(metricsMiddleware);
 
 app.use("/api/v1", urlRouter);
 app.use("/api/v1", authRouter);
