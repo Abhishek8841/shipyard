@@ -1,3 +1,4 @@
+import { dockerBuildErrors } from "@shipyard/metrics";
 import { DockerManager } from "../docker/manager.docker";
 import { uploadToObjectStore } from "./uploader.helper";
 
@@ -16,7 +17,10 @@ export async function executor(gitUrl: string, deploymentId: string, directory: 
     try {
         const result = await DockerManager.startContainer(container, gitUrl, deploymentId, directory);
 
-        if (result.exitCode != 0) throw new Error(result.stderr || "Build Failed");
+        if (result.exitCode != 0) {
+            dockerBuildErrors.inc();
+            throw new Error(result.stderr || "Build Failed");
+        };
 
         const stream = await DockerManager.getBuildArtifacts(container, directory);
 
