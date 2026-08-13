@@ -5,8 +5,8 @@ import authRouter from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
 import deploymentRouter from "./routes/deployment.routes";
 import cors from "cors"
-import { register } from "@shipyard/metrics";
 import { metricsMiddleware } from "./middleware/metrics.middleware";
+import { apiRegister } from "@shipyard/metrics";
 
 dotenv.config();
 
@@ -28,10 +28,10 @@ app.use(cors({
 app.get("/metrics", async (req: Request, res: Response) => {
     res.set(
         "Content-Type",
-        register.contentType
+        apiRegister.contentType
     );
     res.end(
-        await register.metrics()
+        await apiRegister.metrics()
     );
 })
 

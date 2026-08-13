@@ -58,7 +58,7 @@ services:
     command: sh -c "npx prisma migrate deploy --schema ../../packages/database/prisma/schema.prisma --config ../../packages/database/prisma.config.ts && node dist/index.js"    
     container_name: shipyard-api
     ports:
-      - "3010:3000"
+      - "3010:3010"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
@@ -102,7 +102,7 @@ services:
     restart: always
     container_name: shipyard-proxy
     ports:
-      - "3020:3001"
+      - "3020:3020"
     environment:
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}

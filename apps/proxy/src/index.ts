@@ -4,7 +4,7 @@ dotenv.config();
 import Express, { NextFunction, Request, Response } from "express";
 import serveFiles from "./services/files.service";
 import { getDeploymentId } from "./services/lookup.service";
-import { proxyDuration, proxyRequestCounter, register } from "@shipyard/metrics";
+import { proxyDuration, proxyRegister, proxyRequestCounter } from "@shipyard/metrics";
 
 
 const app = Express();
@@ -26,8 +26,8 @@ function isAsset(path: string): boolean {
 }
 
 app.get("/metrics", async (req: Request, res: Response) => {
-    res.set("Content-Type", register.contentType);
-    res.end(await register.metrics());
+    res.set("Content-Type", proxyRegister.contentType);
+    res.end(await proxyRegister.metrics());
 })
 
 app.get("/{*splat}", async (req: Request, res: Response) => {
@@ -90,7 +90,7 @@ app.use((err: Error, req: Request, res: Response, next: Function) => {
 });
 
 
-app.listen(3001, () => { console.log("proxy server is live") });
+app.listen(3020, () => { console.log("proxy server is live on port 3020") });
 
 
 
