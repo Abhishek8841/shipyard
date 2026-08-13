@@ -1,17 +1,34 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import Express, { request, Request, Response } from "express";
+import Express, { NextFunction, Request, Response } from "express";
 import serveFiles from "./services/files.service";
 import { getDeploymentId } from "./services/lookup.service";
+import { proxyDuration, proxyRequestCounter, register } from "@shipyard/metrics";
 
 
 const app = Express();
 
+app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path == "/metrics") return next();
+    const timer = proxyDuration.startTimer()
+    res.on("finish", () => {
+        timer();
+        proxyRequestCounter.inc({
+            status: String(res.statusCode),
+        })
+    })
+    next();
+})
 
 function isAsset(path: string): boolean {
     return (/\.[^/]+$/.test(path) && !path.endsWith(".html"));
 }
+
+app.get("/metrics", async (req: Request, res: Response) => {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+})
 
 app.get("/{*splat}", async (req: Request, res: Response) => {
 
