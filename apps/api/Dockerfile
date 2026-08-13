@@ -23,7 +23,12 @@ RUN npm run build
 WORKDIR /app/packages/shared
 RUN npm run build
 
+WORKDIR /app/packages/metrics
+RUN npm run build
+
 WORKDIR /app/apps/api
 RUN npm run build
+
+
 
 CMD ["node", "dist/index.js"]

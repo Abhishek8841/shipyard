@@ -50,6 +50,15 @@ services:
       timeout: 7s
       retries: 5
 
+  prometheus: 
+    image: prom/prometheus
+    container_name: shipyard-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  
   api:
     build: 
       context: .
@@ -76,6 +85,8 @@ services:
       dockerfile: ./apps/builder/Dockerfile
     restart: always
     container_name: shipyard-builder-main
+    ports:
+      - "3030:3030"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:

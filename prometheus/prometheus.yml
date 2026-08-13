@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  
+  - job_name: "shipyard-api"
+    static_configs:
+      - targets: ["api:3010"]
+
+  - job_name: "shipyard-proxy"
+    static_configs:
+      - targets: ["proxy:3020"]
+
+  - job_name: "shipyard-builder"
+    static_configs:
+      - targets: ["builder:3030"]
