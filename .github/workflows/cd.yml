@@ -65,5 +65,6 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ~/shipyard
+            git pull
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
