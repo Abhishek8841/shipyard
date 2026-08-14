@@ -58,6 +58,15 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    container_name: shipyard-grafana
+    restart: always
+    ports:
+      - "3040:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
   
   api:
     build: 
@@ -130,3 +139,4 @@ services:
 volumes:
   postgres-data: 
   minio_data:
+  grafana_data:
