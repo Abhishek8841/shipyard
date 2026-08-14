@@ -50,13 +50,34 @@ services:
       timeout: 7s
       retries: 5
 
+  prometheus: 
+    image: prom/prometheus
+    container_name: shipyard-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana
+    container_name: shipyard-grafana
+    restart: always
+    ports:
+      - "3040:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+
   api:
     image: ghcr.io/abhishek8841/shipyard-app-api:latest
     restart: always
     command: sh -c "npx prisma migrate deploy --schema ../../packages/database/prisma/schema.prisma --config ../../packages/database/prisma.config.ts && node dist/index.js"    
     container_name: shipyard-api
     ports:
-      - "3010:3000"
+      - "3010:3010"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
@@ -72,6 +93,8 @@ services:
     image: ghcr.io/abhishek8841/shipyard-app-builder:latest
     restart: always
     container_name: shipyard-builder-main
+    ports:
+      - "3030:3030"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -96,7 +119,7 @@ services:
     restart: always
     container_name: shipyard-proxy
     ports:
-      - "3020:3001"
+      - "3020:3020"
     environment:
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
@@ -113,3 +136,5 @@ services:
 volumes:
   postgres-data: 
   minio_data:
+  prometheus_data:
+  grafana_data:

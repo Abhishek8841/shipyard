@@ -71,7 +71,7 @@ export class DockerManager {
                     }
                 });
                 console.log(data);
-                stdout += data;
+                stderr += data;
                 publisher.publish(`deployment:${deploymentId}`, data);
                 callback();
             }

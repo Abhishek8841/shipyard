@@ -3,8 +3,10 @@ import { jobArgs } from "@shipyard/shared"
 import { prisma } from "@shipyard/database";
 import { DeploymentStatus } from "@shipyard/database/status"
 import { executor } from "../helper/executor.helper";
+import { buildDuration } from "@shipyard/metrics";
 
 export async function uploader(job: Job<jobArgs>) {
+    const timer = buildDuration.startTimer();
     try {
         const { deploymentId, projectName, gitUrl, directory, env } = job.data;
         console.log("job received with following params:-> ", job.data)
@@ -40,5 +42,8 @@ export async function uploader(job: Job<jobArgs>) {
             }
         });
         throw error;
+    }
+    finally {
+        timer();
     }
 }
