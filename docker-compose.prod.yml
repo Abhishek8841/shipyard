@@ -57,8 +57,9 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
   grafana:
     image: grafana/grafana
     container_name: shipyard-grafana
@@ -67,6 +68,8 @@ services:
       - "3040:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
 
   api:
     image: ghcr.io/abhishek8841/shipyard-app-api:latest
@@ -133,4 +136,5 @@ services:
 volumes:
   postgres-data: 
   minio_data:
+  prometheus_data:
   grafana_data:
