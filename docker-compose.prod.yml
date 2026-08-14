@@ -66,6 +66,10 @@ services:
     restart: always
     ports:
       - "3040:3000"
+    environment:
+      - GF_SERVER_DOMAIN=grafana.shipyard.abatra.me
+      - GF_SERVER_ROOT_URL=https://grafana.shipyard.abatra.me
+
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
