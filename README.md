@@ -4,11 +4,19 @@ A self-hosted deployment platform that takes a Git repository URL, builds it ins
 
 Built to understand the internal mechanics of deployment platforms -- how source code moves from a repository to a running deployment, and every infrastructure decision in between.
 
+## Live Demo
+
+| | URL | Credentials |
+|---|---|---|
+| **Application** | [shipyard.abatra.me](https://shipyard.abatra.me) | — |
+| **Grafana Dashboards** | [grafana.shipyard.abatra.me](https://grafana.shipyard.abatra.me) | Username: `viewer` · Password: `demo` |
+
 ## Table of Contents
 
 - [Why I Built This](#why-i-built-this)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
+- [Key Packages](#key-packages)
 - [Deployment Lifecycle](#deployment-lifecycle)
 - [Monorepo Structure](#monorepo-structure)
 - What I Learned
@@ -21,6 +29,11 @@ Built to understand the internal mechanics of deployment platforms -- how source
   - [Reverse Proxy and Artifact Serving](#reverse-proxy-and-artifact-serving)
   - [CI/CD Pipeline](#cicd-pipeline)
   - [Production Deployment](#production-deployment)
+- [Monitoring & Observability](#monitoring--observability)
+  - [Prometheus](#prometheus)
+  - [Grafana](#grafana)
+  - [Dashboard Provisioning](#dashboard-provisioning)
+  - [Deployment Integration](#deployment-integration)
 - [Future Improvements](#future-improvements)
 - [Running Locally](#running-locally)
 - [Limitations](#limitations)
@@ -59,17 +72,12 @@ Shipyard is composed of five independently deployable services connected through
 | API Framework | Express 5 |
 | Frontend | React 19, Vite 8, React Router |
 | Database | PostgreSQL 17 |
-| ORM | Prisma (with `@prisma/adapter-pg`) |
-| Validation | Zod |
-| Authentication | JWT (`jsonwebtoken`), bcrypt, HTTP-only cookies |
 | Job Queue | BullMQ |
-| Queue Backend | Redis 7 (ioredis) |
-| WebSocket | `ws` library |
-| Container Management | Docker, dockerode |
+| Queue Backend | Redis 7 |
+| Container Management | Docker |
 | Object Storage | MinIO (S3-compatible) |
-| S3 Client | `@aws-sdk/client-s3`, `@aws-sdk/lib-storage` |
-| Archive Processing | `tar-stream` |
-| MIME Detection | `mime` |
+| Monitoring | Prometheus |
+| Dashboards | Grafana |
 | Reverse Proxy (External) | Nginx |
 | TLS | Let's Encrypt / Certbot |
 | CI/CD | GitHub Actions |
@@ -78,6 +86,22 @@ Shipyard is composed of five independently deployable services connected through
 | Hosting (Frontend) | Vercel |
 | Orchestration | Docker Compose |
 
+## Key Packages
+
+| Package | Purpose |
+|---|---|
+| `prisma`, `@prisma/adapter-pg` | ORM and PostgreSQL driver adapter |
+| `zod` | Request validation and schema definition |
+| `jsonwebtoken`, `bcrypt` | JWT authentication and password hashing |
+| `ioredis` | Redis client for queue backend and Pub/Sub |
+| `bullmq` | Distributed job queue for deployment processing |
+| `ws` | WebSocket server for real-time build log delivery |
+| `dockerode` | Programmatic Docker container management |
+| `@aws-sdk/client-s3`, `@aws-sdk/lib-storage` | S3-compatible object storage client and streaming upload |
+| `tar-stream` | Streaming tar archive extraction for build artifacts |
+| `mime` | MIME type detection for served files |
+| `prom-client` | Prometheus metrics client for Node.js |
+
 Supporting infrastructure:
 
 | Component | Role |
@@ -85,7 +109,9 @@ Supporting infrastructure:
 | **PostgreSQL** | Persistent storage for users, deployments, logs, and deployment metadata. |
 | **Redis** | BullMQ job queue backend and Pub/Sub transport for real-time build log delivery. |
 | **MinIO** | S3-compatible object storage for build artifacts. Each deployment's output files are stored as individual objects keyed by deployment ID. |
-| **Nginx** | External reverse proxy handling TLS termination, HTTPS, and domain routing to the API, proxy, and frontend services. |
+| **Prometheus** | Metrics collection. Scrapes `/metrics` endpoints from API, builder, and proxy services at 5-second intervals. |
+| **Grafana** | Metrics visualization. Provides pre-provisioned dashboards for monitoring platform health and performance. |
+| **Nginx** | External reverse proxy handling TLS termination, HTTPS, and domain routing to the API, proxy, Grafana, and frontend services. |
 
 ```mermaid
 graph TB
@@ -181,7 +207,7 @@ sequenceDiagram
 
 ## Monorepo Structure
 
-Shipyard uses npm workspaces to manage a monorepo containing four applications and three shared packages:
+Shipyard uses npm workspaces to manage a monorepo containing four applications, four shared packages, and a monitoring configuration directory:
 
 ```
 shipyard/
@@ -220,9 +246,23 @@ shipyard/
 │   ├── redis/                # Redis connection manager (ioredis singleton)
 │   │   └── src/
 │   │       └── redis-manager.ts
-│   └── shared/               # Shared TypeScript types (jobArgs)
+│   ├── shared/               # Shared TypeScript types (jobArgs)
+│   │   └── src/
+│   │       └── types.ts
+│   └── metrics/              # Prometheus metric definitions (prom-client)
 │       └── src/
-│           └── types.ts
+│           ├── api/           # API metrics (http_requests_total, deployments_created_total)
+│           ├── builder/       # Builder metrics (build_duration, queue_duration, active_jobs)
+│           ├── proxy/         # Proxy metrics (request_counter, serve_duration)
+│           └── index.ts       # Re-exports all metric registries and instances
+├── monitoring/
+│   ├── prometheus/
+│   │   └── prometheus.yml     # Scrape configuration for API, builder, proxy
+│   └── grafana/
+│       ├── dashboards/        # Dashboard JSON files (overview, api, builder, proxy)
+│       └── provisioning/
+│           ├── dashboards.yml # File-based dashboard provider config
+│           └── datasources.yml # Prometheus datasource config
 ├── runtimes/
 │   ├── Dockerfile            # Build environment image (node:22 + git)
 │   └── main.sh               # Build script (clone, install, build)
@@ -238,11 +278,12 @@ shipyard/
 
 ### Why Shared Packages
 
-The API, builder, and proxy all need access to the same database client and Redis connection. Without shared packages, each application would duplicate the Prisma configuration, connection string handling, and Redis setup. By extracting these into `@shipyard/database`, `@shipyard/redis`, and `@shipyard/shared`:
+The API, builder, and proxy all need access to the same database client, Redis connection, and metric definitions. Without shared packages, each application would duplicate the Prisma configuration, connection string handling, Redis setup, and Prometheus metric registrations. By extracting these into `@shipyard/database`, `@shipyard/redis`, `@shipyard/shared`, and `@shipyard/metrics`:
 
 - Database schema changes propagate to all consumers automatically.
 - The Prisma client is instantiated once per process, not duplicated.
 - Shared types (like `jobArgs`) ensure the API and builder agree on the job payload shape at compile time.
+- Metric definitions (counters, gauges, histograms) are centralized, ensuring consistent metric names and labels across services.
 
 ## Docker Build Isolation
 
@@ -865,6 +906,7 @@ GitHub Container Registry is used because it integrates directly with GitHub Act
 | Component | Host | Purpose |
 |---|---|---|
 | API, Builder, Proxy, Redis, PostgreSQL, MinIO | Hetzner VPS | Backend services via Docker Compose |
+| Prometheus, Grafana | Hetzner VPS | Metrics collection and dashboard visualization |
 | Frontend | Vercel | Static site hosting for the React SPA |
 | Nginx | Hetzner VPS | TLS termination, HTTPS, domain routing |
 | TLS Certificates | Let's Encrypt / Certbot | Automated certificate provisioning and renewal |
@@ -881,6 +923,7 @@ DNS resolves shipyard.abatra.me → Hetzner VPS IP
 Nginx (port 443)
     ├── shipyard.abatra.me → Vercel (frontend)
     ├── api.shipyard.abatra.me → localhost:3010 (API)
+    ├── grafana.shipyard.abatra.me → localhost:3040 (Grafana)
     └── *.app.shipyard.abatra.me → localhost:3020 (Proxy)
 ```
 
@@ -894,14 +937,106 @@ The production compose file pulls pre-built images from GHCR instead of building
 
 The API container runs Prisma migrations on startup (`prisma migrate deploy`) before starting the Node.js process, ensuring the database schema is always up to date.
 
-Persistent data is stored in named Docker volumes (`postgres-data`, `minio_data`) so it survives container restarts.
+Persistent data is stored in named Docker volumes (`postgres-data`, `minio_data`, `prometheus_data`, `grafana_data`) so it survives container restarts.
 
+
+## Monitoring & Observability
+
+Shipyard includes an integrated monitoring and observability stack built on Prometheus and Grafana. Each service exposes application-level metrics via a `/metrics` endpoint, which Prometheus scrapes at a 5-second interval. Grafana connects to Prometheus as its datasource and provides pre-built dashboards for visualizing platform health and performance.
+
+### Prometheus
+
+Prometheus collects metrics from all three Shipyard services -- API, builder, and proxy. Each service uses the `prom-client` library through a shared `@shipyard/metrics` package that defines per-service metric registries and metric instances.
+
+The metrics currently tracked include:
+
+| Service | Metric | Type | Description |
+|---|---|---|---|
+| **API** | `http_requests_total` | Counter | Total HTTP requests, labeled by method, route, and status code |
+| **API** | `deployments_created_total` | Counter | Total deployments created through the API |
+| **Builder** | `deployments_completed_total` | Counter | Total deployments that completed successfully |
+| **Builder** | `deployments_failed_total` | Counter | Total deployments that failed during build |
+| **Builder** | `active_build_jobs` | Gauge | Number of currently active build jobs |
+| **Builder** | `build_duration_seconds` | Histogram | End-to-end build time distribution |
+| **Builder** | `deployment_queue_duration_seconds` | Histogram | Time spent waiting in the deployment queue before processing |
+| **Builder** | `docker_build_errors_total` | Counter | Total Docker-level build failures |
+| **Proxy** | `proxy_request_counter_total` | Counter | Total proxy requests, labeled by response status |
+| **Proxy** | `time_to_serve_deployments` | Histogram | Latency distribution for serving deployment files |
+
+Prometheus is configured in `monitoring/prometheus/prometheus.yml` with three scrape targets:
+
+```yaml
+scrape_configs:
+  - job_name: "shipyard-api"
+    static_configs:
+      - targets: ["api:3010"]
+
+  - job_name: "shipyard-proxy"
+    static_configs:
+      - targets: ["proxy:3020"]
+
+  - job_name: "shipyard-builder"
+    static_configs:
+      - targets: ["builder:3030"]
+```
+
+The builder runs a lightweight HTTP server on port 3030 dedicated to serving its `/metrics` endpoint, since BullMQ workers do not expose an HTTP server by default.
+
+### Grafana
+
+Grafana provides the visualization layer for Prometheus metrics. Dashboards are accessible at:
+
+```
+https://grafana.shipyard.abatra.me
+```
+
+A read-only viewer account is available for exploring the dashboards:
+
+| Field | Value |
+|---|---|
+| Username | `viewer` |
+| Password | `demo` |
+
+Grafana is configured with `GF_SERVER_DOMAIN` and `GF_SERVER_ROOT_URL` environment variables to support access through the production subdomain, with Nginx handling TLS termination and routing to the Grafana container on port 3040.
+
+### Dashboard Provisioning
+
+Dashboards are managed as code. Rather than being created manually through the Grafana UI, all dashboards are stored as JSON files in the repository under `monitoring/grafana/dashboards/` and loaded automatically on container startup via Grafana's provisioning system.
+
+The provisioning configuration consists of two parts:
+
+- **Datasource provisioning** (`monitoring/grafana/provisioning/datasources.yml`) -- defines Prometheus as the default datasource, pointing to `http://prometheus:9090` within the Docker network.
+- **Dashboard provisioning** (`monitoring/grafana/provisioning/dashboards.yml`) -- configures a file-based provider named `shipyard` that imports all JSON dashboards from `/var/lib/grafana/dashboards` inside the container.
+
+The current dashboards:
+
+| Dashboard | Purpose |
+|---|---|
+| **Shipyard Overview Dashboard** | High-level platform health -- deployment counts, build success/failure rates, active jobs, and queue wait times |
+| **API Dashboard** | HTTP request volume, status code distribution, and deployment creation rate |
+| **Builder Dashboard** | Build duration histograms, queue latency, active job gauge, and Docker error tracking |
+| **Proxy Dashboard** | Request throughput, response status distribution, and file serving latency |
+
+### Deployment Integration
+
+Prometheus and Grafana are included as services in the Docker Compose deployment alongside the existing infrastructure. Both services are configured with `restart: always` for automatic recovery.
+
+Persistent named volumes (`prometheus_data`, `grafana_data`) ensure that metric history and Grafana configuration survive container restarts. The following volume mounts connect the repository's monitoring configuration to the containers:
+
+```
+./monitoring/prometheus/prometheus.yml       → /etc/prometheus/prometheus.yml
+./monitoring/grafana/dashboards/             → /var/lib/grafana/dashboards
+./monitoring/grafana/provisioning/dashboards.yml  → /etc/grafana/provisioning/dashboards/dashboards.yml
+./monitoring/grafana/provisioning/datasources.yml → /etc/grafana/provisioning/datasources/datasources.yml
+```
+
+The monitoring stack is automatically available after running `docker compose up` -- no additional setup or manual dashboard import is required.
 
 ## Future Improvements
 
 - **Git commit SHA image tags** -- tag Docker images with the Git commit SHA instead of (or in addition to) `latest` to create immutable, traceable image versions. Currently all images use the `latest` tag, which makes it impossible to identify exactly which commit a running container was built from.
 - **Automated rollback** -- with SHA-based image tags in place, detect failed deployments and automatically revert to the previous working image tag. This is not currently implemented and depends on moving away from the `latest`-only tagging strategy.
-- **Prometheus and Grafana** -- add monitoring and observability to the platform. Prometheus would scrape metrics from each service (API latency, queue depth, build duration, memory usage, container lifecycle events), and Grafana would provide dashboards for visualizing system health. This is not currently implemented.
+- **Extended Prometheus metrics** -- expand the current monitoring coverage with additional metrics such as memory usage, container lifecycle events, and per-user deployment tracking. The base Prometheus and Grafana stack is implemented; deeper instrumentation is a future effort.
 - **Kubernetes** -- replace Docker Compose with Kubernetes for container orchestration, enabling horizontal pod autoscaling, rolling deployments, self-healing (automatic container restart on failure), and resource quota management across namespaces. This is not currently implemented -- the platform currently runs on a single VPS with Docker Compose.
 - **Kafka** -- introduce Apache Kafka as a distributed event streaming platform for future event-driven architecture. Kafka would enable durable, ordered event logs for deployment lifecycle events, build log aggregation, and decoupled communication between services at higher throughput than Redis Pub/Sub. This is not currently implemented.
 - **Stronger build sandboxing** -- replace Docker with gVisor, Firecracker, or a VM-based isolation layer for running untrusted build commands.
@@ -958,8 +1093,11 @@ docker pull ghcr.io/abhishek8841/shipyard-builder-image:latest
 |---|---|
 | API | `localhost:3010` |
 | Proxy | `localhost:3020` |
+| Builder Metrics | `localhost:3030` |
+| Grafana | `localhost:3040` |
 | MinIO Console | `localhost:9001` |
 | MinIO API | `localhost:9000` |
+| Prometheus | `localhost:9090` |
 | Frontend (dev) | `localhost:4000` (run separately with `npm run dev` in `apps/frontend`) |
 
 ## Limitations
