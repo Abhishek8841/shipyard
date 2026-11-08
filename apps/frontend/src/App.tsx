@@ -40,6 +40,12 @@ export default function App() {
       <AuthProvider>
         <>
           <div style={{ paddingBottom: 60 }}>
+            <div className="service-status-banner" role="status">
+              <div className="service-status-content">
+                <strong>Hosted backend paused.</strong>{" "}
+                The API, builder, database, queue, and storage services are stopped to keep infrastructure costs down. Sign-in, deployments, and live logs are unavailable in the hosted preview; run the stack locally to try them.
+              </div>
+            </div>
             <Routes>
               <Route
                 path="/login"

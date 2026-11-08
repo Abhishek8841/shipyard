@@ -1,32 +1,27 @@
-# React + TypeScript + Vite
+# Shipyard Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The Shipyard frontend is a React and TypeScript single-page application built with Vite. It provides the sign-in flow, deployment dashboard, deployment details, and build log views.
 
-Currently, two official plugins are available:
+## Hosted Demo Status
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The hosted backend is paused to keep infrastructure costs down. The frontend is available as a UI preview, but sign-in, deployment creation, deployment details, and live build logs need the API and worker services to be running. The Grafana and Prometheus services are paused as well. See the root README for screenshots and the full architecture.
 
-## React Compiler
+## Application Flow
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `/login` lets a user sign in or create an account through the API.
+- `/` lists deployments and opens the form for a Git URL, project name, optional root directory, and optional environment variables.
+- `/deployment/:id` shows deployment status, its generated URL, and repository details.
+- `/deployment/:id/logs` loads saved build output and connects to the API WebSocket for live logs.
 
-## Expanding the Oxlint configuration
+The application uses cookie credentials for API requests. The hosted notice appears across all routes so visitors know that backend actions are paused.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Run Locally
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+From the repository root, start the Docker Compose services and then run the Vite development server:
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+    docker compose -f docker-compose.dev.yml up --build
+    npm run dev --workspace @shipyard/frontend
+
+Vite serves the frontend at http://localhost:4000. Configure `VITE_BACKEND_URL` for the API HTTP base URL and `VITE_WS_URL` for its WebSocket host when those services use non-default addresses. The frontend code defaults to http://localhost:3000 for HTTP and ws://localhost:3010 for WebSockets.
+
+For project-wide setup, environment variables, and service ports, see the root README.

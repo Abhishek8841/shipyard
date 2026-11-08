@@ -4,20 +4,25 @@ A self-hosted deployment platform that takes a Git repository URL, builds it ins
 
 Built to understand the internal mechanics of deployment platforms -- how source code moves from a repository to a running deployment, and every infrastructure decision in between.
 
-## Live Demo
+## Hosted Demo Status
 
-| | URL | Credentials |
-|---|---|---|
-| **Application** | [shipyard.abatra.me](https://shipyard.abatra.me) | — |
-| **Grafana Dashboards** | [grafana.shipyard.abatra.me](https://grafana.shipyard.abatra.me) | Username: `viewer` · Password: `demo` |
+The hosted backend and monitoring services are currently paused to keep infrastructure costs down. The frontend remains a UI preview, but sign-in, deployment creation, build logs, and Grafana are unavailable until those services are running again. Run the full stack locally to try the complete flow.
+
+| Surface | Status |
+|---|---|
+| [Shipyard frontend](https://shipyard.abatra.me) | UI preview |
+| API, builder, proxy, database, Redis, and object storage | Paused |
+| Grafana and Prometheus | Paused; dashboard screenshots are included below |
 
 ## Table of Contents
 
+- [Hosted Demo Status](#hosted-demo-status)
 - [Why I Built This](#why-i-built-this)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Key Packages](#key-packages)
 - [Deployment Lifecycle](#deployment-lifecycle)
+- [Product Walkthrough](#product-walkthrough)
 - [Monorepo Structure](#monorepo-structure)
 - What I Learned
   - [Docker Build Isolation](#docker-build-isolation)
@@ -204,6 +209,29 @@ sequenceDiagram
 4. **Artifacts are extracted and uploaded** -- Docker's `getArchive` API produces a tar stream of the `/dist` directory. The builder pipes this through `tar-stream` to extract individual files, streaming each directly to MinIO via the AWS SDK `Upload` class. No intermediate buffer is allocated for the full archive.
 5. **Deployment is marked as ready** -- status is updated to `READY` in PostgreSQL. The container is stopped and removed.
 6. **Proxy serves the deployment** -- incoming requests are routed by subdomain. The proxy resolves the project name to a deployment ID, fetches the requested file from MinIO via `GetObject`, and pipes the readable stream directly to the HTTP response.
+
+## Product Walkthrough
+
+These screenshots show the frontend flow and one example project deployed with Shipyard. They capture a previous hosted run; the hosted backend is now paused as described above.
+
+<table>
+<tr>
+<td width="50%"><strong>1. Configure a deployment</strong><br>Provide a Git repository, project name, and optional root directory or environment variables.</td>
+<td width="50%"><img src="docs/images/deployment-create-form.png" alt="Shipyard deployment form with repository and build options" width="100%"></td>
+</tr>
+<tr>
+<td width="50%"><strong>2. Track deployment status</strong><br>Review the deployment URL, repository, build status, and project settings.</td>
+<td width="50%"><img src="docs/images/deployment-details-building.png" alt="Shipyard deployment details while a build is running" width="100%"></td>
+</tr>
+<tr>
+<td width="50%"><strong>3. Follow the build</strong><br>Open the log view to inspect build output as it streams from the worker.</td>
+<td width="50%"><img src="docs/images/deployment-build-logs.png" alt="Live build log output in the Shipyard dashboard" width="100%"></td>
+</tr>
+</table>
+
+The deployment URL serves the built application through Shipyard's proxy. This example is the signup page of a sample app:
+
+<p align="center"><img src="docs/images/example-deployed-app.png" alt="Example application served by a Shipyard deployment" width="80%"></p>
 
 ## Monorepo Structure
 
@@ -984,18 +1012,7 @@ The builder runs a lightweight HTTP server on port 3030 dedicated to serving its
 
 ### Grafana
 
-Grafana provides the visualization layer for Prometheus metrics. Dashboards are accessible at:
-
-```
-https://grafana.shipyard.abatra.me
-```
-
-A read-only viewer account is available for exploring the dashboards:
-
-| Field | Value |
-|---|---|
-| Username | `viewer` |
-| Password | `demo` |
+Grafana provides the visualization layer for Prometheus metrics. The hosted Grafana service is paused with the backend to control infrastructure costs. When the stack is running locally, Grafana is available at http://localhost:3040. The screenshots below show the dashboards provisioned from the repository.
 
 Grafana is configured with `GF_SERVER_DOMAIN` and `GF_SERVER_ROOT_URL` environment variables to support access through the production subdomain, with Nginx handling TLS termination and routing to the Grafana container on port 3040.
 
@@ -1016,6 +1033,25 @@ The current dashboards:
 | **API Dashboard** | HTTP request volume, status code distribution, and deployment creation rate |
 | **Builder Dashboard** | Build duration histograms, queue latency, active job gauge, and Docker error tracking |
 | **Proxy Dashboard** | Request throughput, response status distribution, and file serving latency |
+
+### Dashboard Screenshots
+
+The overview dashboard summarizes platform traffic, deployment totals, build outcomes, active work, and build latency. Separate dashboards show builder, API, and proxy metrics.
+
+<table>
+<tr>
+<td width="50%"><strong>Grafana dashboard folder</strong><br><img src="docs/images/grafana-dashboard-folder.png" alt="Grafana folder listing the Shipyard dashboards" width="100%"></td>
+<td width="50%"><strong>Shipyard overview</strong><br><img src="docs/images/grafana-shipyard-overview.png" alt="Grafana Shipyard overview dashboard" width="100%"></td>
+</tr>
+<tr>
+<td width="50%"><strong>Builder metrics</strong><br><img src="docs/images/grafana-builder-metrics.png" alt="Grafana dashboard for build duration, queue wait, and build errors" width="100%"></td>
+<td width="50%"><strong>API metrics</strong><br><img src="docs/images/grafana-api-metrics.png" alt="Grafana dashboard for API request volume and status codes" width="100%"></td>
+</tr>
+<tr>
+<td width="50%"><strong>Proxy metrics</strong><br><img src="docs/images/grafana-proxy-metrics.png" alt="Grafana dashboard for proxy traffic and serving latency" width="100%"></td>
+<td></td>
+</tr>
+</table>
 
 ### Deployment Integration
 
